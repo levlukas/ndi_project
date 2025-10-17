@@ -1,0 +1,1 @@
+soubor `cv1_1` je source code pro detektor nabezne hrany
