@@ -73,7 +73,7 @@ architecture testbench of pkt_ctrl_tb is
 
             begin
                 -- initial wait
-                wait_cycles(clk; 5);
+                wait_cycles(clk, 5);
 
                 ----------------------------
                 -- TEST 1: first transaction
@@ -168,7 +168,8 @@ architecture testbench of pkt_ctrl_tb is
                 fr_start <= '0'; wait for 3 * c_CLK_PER;
                 fr_end <= '1'; wait for c_CLK_PER;
                 fr_end <= '0'; wait for 5 * c_CLK_PER;
-
+                
+                wait;
             end process;
 
     end testbench;
