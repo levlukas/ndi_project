@@ -48,14 +48,14 @@ begin
         end process;
         
     -- track if first calculation is complete
-    process (clk)
+    process (clk) -- TODO: nadbytecne, jestli je prijat sum nebo mul urcuje stav automatu
         begin
             if rising_edge(clk) then
                 if present_state = s3_receiv2 and fr_end = '1' and fr_err = '0' then
-                    -- First complete transaction done, AU now has valid results
+                    -- First stransaction done, sum retrieved
                     first_cycle_complete <= '1';
                 elsif (present_state = s1_receiv1 or present_state = s3_receiv2) and fr_err = '1' then
-                    -- Error invalidates results
+                    -- Error resets the state
                     first_cycle_complete <= '0';
                 end if;
             end if;
@@ -75,11 +75,9 @@ begin
             
             -- Switch from s0 to s1
             -- if fr_start
-            case present_state is
+            case present_state is 
                 when s0_wait1 =>
                     -- waiting for first frame
-                    we_data_fr1 <= '0';
-                    we_data_fr2 <= '0';
                     
                     if fr_start = '1' then
                         next_state <= s1_receiv1;
@@ -88,7 +86,6 @@ begin
                 when s1_receiv1 =>
                     -- receiving first packet on MOSI
                     we_data_fr1 <= '1';
-                    we_data_fr2 <= '0';
 
                     -- simultaneously send previous sum on MISO (if first cycle complete)
                     if first_cycle_complete = '1' then
@@ -117,6 +114,7 @@ begin
                     we_data_fr2 <= '1';   
 
                     -- simultaneously send previous product on MISO (if first cycle complete)
+                    -- TODO: posilam, prijmam i zapisuji -> to nefunguje
                     if first_cycle_complete = '1' then
                         wr_data <= '1';
                         data_in <= mul_res;  -- Direct from AU (previous calculation)
