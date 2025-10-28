@@ -24,7 +24,7 @@ signal data_in, data_out : std_logic_vector(data_width-1 downto 0);
 signal load_data : std_logic;
 signal clk, SCLK : std_logic;
 
----------FUNCTIONS & PROCEDURES---------
+---------DATA TYPES---------
 -- SPI IF as records
 type t_SPI_MOSI is record
     SCLK : std_logic;
@@ -67,7 +67,35 @@ begin
     wait for c_SCLK_per/2;
     spi_mosi.cs_b <= '1';
     data_out := to_integer(signed(data_rcv));
-end procedure;                     
+end procedure;
+
+-- TESTCASE
+procedure tc_1 (signal spi_mosi : out t_SPI_MOSI;
+                signal spi_miso : in  t_SPI_MISO) is
+    variable fr_1, fr_2 : integer;  -- frame parsable variable
+    begin
+        -- send first packet and report (no calc. output expected)
+        send_frame(1000, fr_1, spi_mosi, spi_miso);
+        wait_clk(2);
+        send_frame(10000, fr_2, spi_mosi, spi_miso);
+        wait_clk(2);
+        report "FR1 : " & integer'image(fr_1) & 
+               "FR2 : " & integer'image(fr_2);
+
+        -- send second packet and report (calc output from previous pkt)
+        send_frame(0, fr_1, spi_mosi, spi_miso);
+        wait for c_SCLK_per*2;
+        send_frame(0, fr_2, spi_mosi, spi_miso);
+        wait for c_SCLK_per*2;
+        report "FR1 : " & integer'image(fr_1) & 
+               "FR2 : " & integer'image(fr_2);
+
+        -- TODO: enable this
+        -- check for 1st pkt calc. output
+        -- if fr_1 /= 11000 then
+        --     report "chyba souctu" severity error;
+        -- end if; 
+    end procedure;
 
 begin
     ----------------------------------------------------------------------------------
