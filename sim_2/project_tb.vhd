@@ -117,7 +117,7 @@ begin
         );
     
     ----------------------------------------------------------------------------------
-    -- test for clk gen by BFM
+    -- clk gen by BFM
     p_clk_bfm : process
         begin
             if run_clk_gen = '1' then
@@ -130,16 +130,6 @@ begin
             end if;
         end process;
 
-    -- clock generator, process is running all the time - when end of process is reached,
-    -- it is started again from the begining (effectively infinite loop)
-    p_clk_gen : process 
-        begin
-            clk <= '0';
-            wait for c_CLK_PER/2;
-            clk <= '1';
-            wait for c_CLK_PER/2;  
-        end process;
-    
     -- generator for the SCLK
     p_sclk_gen : process 
         begin
