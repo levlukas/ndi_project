@@ -8,7 +8,7 @@ end project_tb;
 
 architecture testbench of project_tb is
 
-----------SIGNALS--------------------------------------------------------------
+----------SIGNALS---------
 -- tb constants
 constant c_CLK_PER    : time := 10 ns;
 constant c_SCLK_PER   : time := 50 ns; 
@@ -24,7 +24,19 @@ signal data_in, data_out : std_logic_vector(data_width-1 downto 0);
 signal load_data : std_logic;
 signal clk, SCLK : std_logic;
 
-----------FUNCTIONS & PROCEDURES------------------------------------------------
+---------FUNCTIONS & PROCEDURES---------
+-- SPI IF as records
+type t_SPI_MOSI is record
+    SCLK : std_logic;
+    CS_b : std_logic;
+    MOSI : std_logic;
+end record;
+
+type t_SPI_MISO is record
+    MISO : std_logic;
+end record;
+
+---------FUNCTIONS & PROCEDURES---------
 procedure wait_clk (n_clks : natural) is
 begin
     for i in 1 to n_clks loop
@@ -38,11 +50,11 @@ procedure send_frame(constant data_in  : in  integer;
                      
                      signal spi_mosi   : out t_SPI_MOSI;
                      signal spi_miso   : in  t_SPI_MISO) is
-variable data2send, data_rcv : std_logic_vector(c_DATA_W-1 downto 0);
+variable data2send, data_rcv : std_logic_vector(data_width-1 downto 0);
 begin
-    data2send := std_logic_vector(to_signed(data_in, c_DATA_W));
+    data2send := std_logic_vector(to_signed(data_in, data_width));
     spi_mosi.cs_b <= '0';
-    for idx in 0 to c_DATA_W-1 loop
+    for idx in 0 to data_width-1 loop
         wait for c_SCLK_per/2;
         spi_mosi.sclk <= '0';
         -- Master sets output signal on SCLK falling edge
