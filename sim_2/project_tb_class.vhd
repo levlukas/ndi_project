@@ -88,7 +88,7 @@ begin
      send_frame(10000, fr_2, spi_mosi, spi_miso);
      wait for c_SCLK_per*2;
      report "FR1 : " & integer'image(fr_1) & 
-          "  FR2 : " & integer'image(fr_2);
+            "FR2 : " & integer'image(fr_2);
      
      -- send second packet
      send_frame(0, fr_1, spi_mosi, spi_miso);
@@ -96,7 +96,7 @@ begin
      send_frame(0, fr_2, spi_mosi, spi_miso);
      wait for c_SCLK_per*2;
      report "FR1 : " & integer'image(fr_1) & 
-          "  FR2 : " & integer'image(fr_2);
+            "FR2 : " & integer'image(fr_2);
      
      if fr_1 /= 11000 then
         report "chyba souctu" severity error;
