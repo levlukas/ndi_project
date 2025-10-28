@@ -8,22 +8,6 @@ end project_tb;
 
 architecture testbench of project_tb is
 
-----------SIGNALS---------
--- tb constants
-constant c_CLK_PER    : time := 10 ns;
-constant c_SCLK_PER   : time := 50 ns; 
-constant data_width   : natural := 8;
-
--- TB control signals
-signal run_clk_gen : std_logic; 
-
--- DUT input & output signals
-signal CS_b : std_logic;
-signal MOSI, MISO : std_logic;
-signal data_in, data_out : std_logic_vector(data_width-1 downto 0);
-signal load_data : std_logic;
-signal clk, SCLK : std_logic;
-
 ---------DATA TYPES---------
 -- SPI IF as records
 type t_SPI_MOSI is record
@@ -35,6 +19,24 @@ end record;
 type t_SPI_MISO is record
     MISO : std_logic;
 end record;
+
+----------SIGNALS & CONSTANTS---------
+-- tb constants
+constant c_CLK_PER    : time := 10 ns;
+constant c_SCLK_PER   : time := 50 ns; 
+constant data_width   : natural := 16;
+
+-- TB control signals
+signal rst         : std_logic;
+signal run_clk_gen : std_logic; 
+
+-- DUT input & output signals
+signal dut_mosi : t_SPI_MOSI;
+signal dut_miso : t_SPI_MISO;
+signal clk, SCLK : std_logic;
+-- signals for packet control check, eventually will be removed
+signal add_res : std_logic_vector(data_width-1 downto 0);
+signal mul_res : std_logic_vector(data_width-1 downto 0);
 
 ---------FUNCTIONS & PROCEDURES---------
 procedure wait_clk (n_clks : natural) is
@@ -54,12 +56,13 @@ variable data2send, data_rcv : std_logic_vector(data_width-1 downto 0);
 begin
     data2send := std_logic_vector(to_signed(data_in, data_width));
     spi_mosi.cs_b <= '0';
+    -- transmit LSB first (specification)
     for idx in 0 to data_width-1 loop
-        wait for c_SCLK_per/2;
+        wait for c_SCLK_PER/2;
         spi_mosi.sclk <= '0';
         -- Master sets output signal on SCLK falling edge
         spi_mosi.mosi <= data2send(idx);
-        wait for c_SCLK_per/2;
+        wait for c_SCLK_PER/2;
         spi_mosi.sclk <= '1';
         -- Master samples input data on SCLK rising edge
         data_rcv(idx) := spi_miso.miso;
@@ -80,7 +83,7 @@ procedure tc_1 (signal spi_mosi : out t_SPI_MOSI;
         send_frame(10000, fr_2, spi_mosi, spi_miso);
         wait_clk(2);
         report "FR1 : " & integer'image(fr_1) & 
-               "FR2 : " & integer'image(fr_2);
+               " FR2 : " & integer'image(fr_2);
 
         -- send second packet and report (calc output from previous pkt)
         send_frame(0, fr_1, spi_mosi, spi_miso);
@@ -88,7 +91,7 @@ procedure tc_1 (signal spi_mosi : out t_SPI_MOSI;
         send_frame(0, fr_2, spi_mosi, spi_miso);
         wait for c_SCLK_per*2;
         report "FR1 : " & integer'image(fr_1) & 
-               "FR2 : " & integer'image(fr_2);
+               " FR2 : " & integer'image(fr_2);
 
         -- TODO: enable this
         -- check for 1st pkt calc. output
@@ -100,20 +103,23 @@ procedure tc_1 (signal spi_mosi : out t_SPI_MOSI;
 begin
     ----------------------------------------------------------------------------------
     -- instance of component
-    i_dut : entity work.spi_if(Behavioral)
+    i_dut : entity work.aau(Behavioral)
         generic map (
             data_width => data_width,
             max_chunk_no => 16
         )    
         port map (
             clk => clk,
-            MOSI => MOSI,
-            MISO => MISO,
-            SCLK => SCLK,
-            CS_b => CS_b,
-            data_out => data_out,
-            data_in => data_in,
-            load_data => load_data
+            CS_b => dut_mosi.cs_b,
+            SCLK => dut_mosi.sclk,
+            MOSI => dut_mosi.mosi,
+            MISO => dut_miso.miso,
+            -- data_fr1
+            -- data_fr2
+            add_res => add_res,
+            mul_res => mul_res
+            -- we_data_fr1
+            -- we_data_fr2
         );
     
     ----------------------------------------------------------------------------------
@@ -140,46 +146,32 @@ begin
         end process;    
     
     -- main stimulus
-    p_stimuli : process
-        constant MOSI_data : std_logic_vector(data_width-1 downto 0) := "11101011";
-        begin
-            -- Initialization
-            run_clk_gen <= '1';
-            CS_b <= '1';
-            MOSI <= '0';
-            load_data <= '0';
-            data_in <= "10011011";  -- data to be shifted out on MISO
-            wait_clk(5);
-    
-            -- Load data into serializer before transfer
-            load_data <= '1';
-            wait_clk(5);
-            load_data <= '0';
-            wait until rising_edge(clk);
-    
-            -- Begin SPI transaction
-            CS_b <= '0';
-            wait_clk(5);
-    
-            -- send MOSI data and wait appropriate time
-            for i in 0 to data_width-1 loop
-                MOSI <= MOSI_data(i);
-                wait until rising_edge(SCLK);
-            end loop;
-            MOSI <= '0';
-            
-            for i in 0 to data_width-1 loop
-                wait until rising_edge(SCLK);
-            end loop;
-    
-            -- End frame
-            CS_b <= '1';
-            wait_clk(5);
+    p_stimuli : process 
+        variable tmp : integer;
+    begin
+        -- initial signal assignment
+        dut_mosi.cs_b <= '1';
+        dut_mosi.sclk <= '1';
+        -- start clock generator
+        run_clk_gen <= '1';
+        -- reset sequence (asynchronous reset)
+        rst <= '1';
+        wait_clk(10);
+        rst <= '0';
+        wait_clk(10);
 
-            -- terminate simulation
-            run_clk_gen <= '1';
-            wait;
-        end process;
+        -- Run tests --
+        --send_frame(100, tmp, dut_mosi, dut_miso); 
+        --report "Result is " & integer'image(tmp);
+
+        tc_1(dut_mosi, dut_miso);
+
+        wait_clk(10);
+        -- kill clock generator to stop simulation
+        run_clk_gen <= '0';
+        report "Simulation done" severity note;
+        wait;
+    end process;
     
     
 end testbench;
