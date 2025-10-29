@@ -38,8 +38,8 @@ entity serialiser is
     );
     
     Port ( data : in STD_LOGIC_VECTOR (data_width-1 downto 0);
-           load_en : in STD_LOGIC;
-           shift_en : in STD_LOGIC;
+           load_en : in STD_LOGIC;  -- store the N-bit data
+           shift_en : in STD_LOGIC; -- shift the stored values out
            rst : in STD_LOGIC;
            clk : in STD_LOGIC;
            stream : out STD_LOGIC);

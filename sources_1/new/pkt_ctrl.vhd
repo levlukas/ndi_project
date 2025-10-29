@@ -47,23 +47,23 @@ begin
             end if;
         end process;
         
-    -- track if first calculation is complete
-    process (clk) -- TODO: nadbytecne, jestli je prijat sum nebo mul urcuje stav automatu
-        begin
-            if rising_edge(clk) then
-                if present_state = s3_receiv2 and fr_end = '1' and fr_err = '0' then
-                    -- First stransaction done, sum retrieved
-                    first_cycle_complete <= '1';
-                elsif (present_state = s1_receiv1 or present_state = s3_receiv2) and fr_err = '1' then
-                    -- Error resets the state
-                    first_cycle_complete <= '0';
-                end if;
-            end if;
-        end process;
+    -- TODO: nadbytecne, jestli je prijat sum nebo mul urcuje stav automatu
+    -- process (clk) 
+    --     begin
+    --         if rising_edge(clk) then
+    --             if present_state = s3_receiv2 and fr_end = '1' and fr_err = '0' then
+    --                 -- First stransaction done, sum retrieved
+    --                 first_cycle_complete <= '1';
+    --             elsif (present_state = s1_receiv1 or present_state = s3_receiv2) and fr_err = '1' then
+    --                 -- Error resets the state
+    --                 first_cycle_complete <= '0';
+    --             end if;
+    --         end if;
+    --     end process;
 
     -- COMBINATIONAL PART
     -- the logic behind state changing for each state
-    process (present_state, fr_start, fr_end, fr_err, first_cycle_complete, add_res, mul_res)
+    process (present_state, fr_start, fr_end, fr_err, add_res, mul_res)
         begin
             -- "Default" option
             -- if no "special event", then stay at current state
@@ -71,28 +71,27 @@ begin
             wr_data <= '0';  -- set default to avoid latch
             we_data_fr1 <= '0';  -- set default to avoid latch
             we_data_fr2 <= '0';  -- set default to avoid latch
-            data_in <= (others => '0');
             
             -- Switch from s0 to s1
             -- if fr_start
             case present_state is 
                 when s0_wait1 =>
                     -- waiting for first frame
+                    we_data_fr1 <= '0';
+                    we_data_fr2 <= '0';
+                    wr_data <= '1';
+                    data_in <= add_res;  -- previous au result
                     
                     if fr_start = '1' then
                         next_state <= s1_receiv1;
                     end if;
                     
                 when s1_receiv1 =>
-                    -- receiving first packet on MOSI
+                    -- receiving first packet in both streams
                     we_data_fr1 <= '1';
+                    we_data_fr2 <= '0';
+                    wr_data <= '0';
 
-                    -- simultaneously send previous sum on MISO (if first cycle complete)
-                    if first_cycle_complete = '1' then
-                        wr_data <= '1';
-                        data_in <= add_res;  -- Direct from AU (previous calculation)
-                    end if;
-                    
                     if fr_err = '1' then
                         next_state <= s0_wait1;
                     elsif fr_end = '1' then
@@ -100,8 +99,12 @@ begin
                     end if;
                     
                 when s2_wait2 =>
+                    -- wait for both sterams to get data
+                    -- the data from AU are expected to contain multiplication
                     we_data_fr1 <= '0';
                     we_data_fr2 <= '0';
+                    wr_data <= '1';
+                    data_in <= mul_res;
                     
                     if fr_start = '1' then
                         next_state <= s3_receiv2;
@@ -109,17 +112,12 @@ begin
                     -- TODO: add timeout logic here (RQE_AAU_I_023)
 
                 when s3_receiv2 =>
-                    -- receiving second packet on MOSI
+                    -- receiving data in both streams
+                    -- the data from AU should now contain multiplication
                     we_data_fr1 <= '0';
-                    we_data_fr2 <= '1';   
+                    we_data_fr2 <= '1';
+                    wr_data <= '0'; 
 
-                    -- simultaneously send previous product on MISO (if first cycle complete)
-                    -- TODO: posilam, prijmam i zapisuji -> to nefunguje
-                    if first_cycle_complete = '1' then
-                        wr_data <= '1';
-                        data_in <= mul_res;  -- Direct from AU (previous calculation)
-                    end if;
-                    
                     if fr_err = '1' then
                         next_state <= s2_wait2;
                     elsif fr_end = '1' then
