@@ -72,6 +72,21 @@ begin
             we_data_fr1 => we_data_fr1,
             we_data_fr2 => we_data_fr2
         );
+
+    -- ARITHMETIC UNIT
+    arith_unit : entity work.arith_unit(Behavioral)
+        generic map(
+            data_width => data_width
+        )
+        port map (
+            clk             => clk,       
+            data_fr1        => data_fr1,      
+            we_data_fr1     => we_data_fr1,
+            data_fr2        => data_fr2, 
+            we_data_fr2     => we_data_fr2 
+            add_res         => add_res,
+            mul_res         => mul_res
+        );
 end Behavioral;
 
 
