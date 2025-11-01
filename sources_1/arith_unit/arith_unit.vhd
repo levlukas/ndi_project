@@ -20,13 +20,13 @@ end arith_unit;
 architecture Behavioral of arith_unit is
     -- signals to perform numeric_std operations
     -- these signals store the values of std_logic inputs
-    signal a_sgn, b_sgn : signed (data_width-1 downto 0);
+    signal a_sgn, b_sgn : signed (data_width-1 downto 0) := (others => '0');
     signal s_aux        : signed (data_width downto 0);
     signal m_aux        : signed (data_width*2-1 downto 0);
 
     -- constants for saturation (default for 16 b)
-    constant POS_SAT : signed (data_width-1 downto 0) := to_signed(32767, data_width-1);
-    constant NEG_SAT : signed (data_width-1 downto 0) := to_signed(-32768, data_width-1);
+    constant POS_SAT : signed (data_width-1 downto 0) := to_signed(32767, data_width);
+    constant NEG_SAT : signed (data_width-1 downto 0) := to_signed(-32768, data_width);
 begin
     -- SEQUENTIAL PART
     -- input operands processing with FF
@@ -34,10 +34,10 @@ begin
         begin
             if rising_edge(clk) then
                 if we_data_fr1 = '1' then
-                    a_sgn <= to_signed(data_fr1);
+                    a_sgn <= signed(data_fr1);
                 end if;
                 if we_data_fr2 = '1' then
-                    b_sgn <= to_signed(data_fr2);
+                    b_sgn <= signed(data_fr2);
                 end if;
             end if;
         end process;
@@ -51,18 +51,18 @@ begin
                 elsif s_aux < NEG_SAT then
                     add_res <= std_logic_vector(NEG_SAT);        
                 else 
-                    add_res <= std_logic_vector(resize(m_aux,data_width));
+                    add_res <= std_logic_vector(resize(s_aux,data_width));
                 end if;
 
                 -- product overflow and processing
-                -- TODO: implement this
-                mul_res <= std_logic_vector(m_res);
+                -- TODO: implement this (bitshifts, masks and such probably)
+                mul_res <= std_logic_vector(resize(m_aux,data_width));
             end if;
         end process;
 
     -- COMBINATIONAL PART
     -- arithmetic operations
-    s_aux <= a_sgn + b_sgn;
+    s_aux <= resize(a_sgn, data_width+1) + resize(b_sgn, data_width+1);
     m_aux <= a_sgn * b_sgn;
 
 end Behavioral;

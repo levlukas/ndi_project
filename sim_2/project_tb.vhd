@@ -34,9 +34,6 @@ signal run_clk_gen : std_logic;
 signal dut_mosi : t_SPI_MOSI;
 signal dut_miso : t_SPI_MISO;
 signal clk, SCLK : std_logic;
--- signals for packet control check, eventually will be removed
-signal add_res : std_logic_vector(data_width-1 downto 0);
-signal mul_res : std_logic_vector(data_width-1 downto 0);
 
 ---------FUNCTIONS & PROCEDURES---------
 procedure wait_clk (n_clks : natural) is
@@ -74,9 +71,7 @@ end procedure;
 
 -- TESTCASE
 procedure tc_1 (signal spi_mosi : out t_SPI_MOSI;
-                signal spi_miso : in  t_SPI_MISO;
-                signal tc_add   : out std_logic_vector(data_width-1 downto 0);
-                signal tc_mul   : out std_logic_vector(data_width-1 downto 0)) is
+                signal spi_miso : in  t_SPI_MISO) is
     variable fr_1, fr_2 : integer;  -- frame parsable variable
     begin
         -- send first packet and report (no calc. output expected)
@@ -87,10 +82,6 @@ procedure tc_1 (signal spi_mosi : out t_SPI_MOSI;
         report "FR1 : " & integer'image(fr_1) & 
                " FR2 : " & integer'image(fr_2);
 
-        -- set dummy signals to au output
-        tc_add <= std_logic_vector(to_unsigned(12,16));
-        tc_mul <= std_logic_vector(to_unsigned(10,16));
-        
         -- send second packet and report (calc output from previous pkt)
         send_frame(0, fr_1, spi_mosi, spi_miso);
         wait for c_SCLK_per*2;
@@ -119,13 +110,13 @@ begin
             CS_b => dut_mosi.cs_b,
             SCLK => dut_mosi.sclk,
             MOSI => dut_mosi.mosi,
-            MISO => dut_miso.miso,
+            MISO => dut_miso.miso
             -- data_fr1
             -- data_fr2
-            add_res => add_res,
-            mul_res => mul_res
-            -- we_data_fr1
-            -- we_data_fr2
+            -- add_res => add_res,
+            -- mul_res => mul_res,
+            -- we_data_fr1 => we_data_fr1,
+            -- we_data_fr2 => we_data_fr2
         );
     
     ----------------------------------------------------------------------------------
@@ -170,7 +161,7 @@ begin
         --send_frame(100, tmp, dut_mosi, dut_miso); 
         --report "Result is " & integer'image(tmp);
 
-        tc_1(dut_mosi, dut_miso, add_res, mul_res);
+        tc_1(dut_mosi, dut_miso);
 
         wait_clk(10);
         -- kill clock generator to stop simulation

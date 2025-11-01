@@ -13,13 +13,7 @@ entity aau is
         CS_b        : in  std_logic;
         SCLK        : in  std_logic;
         MOSI        : in  std_logic;
-        MISO        : out std_logic;
-        data_fr1    : out STD_LOGIC_VECTOR(data_width - 1 downto 0); 
-        data_fr2    : out STD_LOGIC_VECTOR(data_width - 1 downto 0); 
-        add_res     : in  STD_LOGIC_VECTOR(data_width - 1 downto 0);
-        mul_res     : in  STD_LOGIC_VECTOR(data_width - 1 downto 0);
-        we_data_fr1 : out std_logic;
-        we_data_fr2 : out std_logic
+        MISO        : out std_logic
     );
 end aau;
 
@@ -27,6 +21,11 @@ architecture Behavioral of aau is
     -- SIGNALS
     -- frame control
     signal fr_start, fr_end, fr_err : std_logic;
+
+    -- au control
+    signal data_fr1, data_fr2: std_logic_vector(data_width-1 downto 0);
+    signal add_res, mul_res : std_logic_vector(data_width-1 downto 0);
+    signal we_data_fr1, we_data_fr2 : std_logic;
 
     -- mosi, miso control
     signal data_out, data_in : std_logic_vector(data_width - 1 downto 0);
@@ -83,7 +82,7 @@ begin
             data_fr1        => data_fr1,      
             we_data_fr1     => we_data_fr1,
             data_fr2        => data_fr2, 
-            we_data_fr2     => we_data_fr2 
+            we_data_fr2     => we_data_fr2,
             add_res         => add_res,
             mul_res         => mul_res
         );
